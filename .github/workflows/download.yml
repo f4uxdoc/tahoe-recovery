@@ -5,14 +5,12 @@ on:
 
 run-name: Generate macOS Tahoe Recovery Image
 
-
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       
-
       - name: Download macOS Installer
         run: |
           curl -L -o /tmp/InstallAssistant.pkg https://swcdn.apple.com/content/downloads/48/60/082-62552-A_EMRHUZQE63/olsval9x51g10i8oplpeakcon8gqp1agei/InstallAssistant.pkg
@@ -21,12 +19,18 @@ jobs:
         run: |
           sudo installer -pkg /tmp/InstallAssistant.pkg -target /
 
+      - name: Find installer path
+        run: |
+          INSTALLER_PATH=$(find /Applications -name "Install*.app" -type d | head -1)
+          echo "INSTALLER_PATH=$INSTALLER_PATH" >> $GITHUB_ENV
+          echo "Found installer: $INSTALLER_PATH"
+
       - name: Generate macOS Installer
         run: |
           sudo hdiutil create -o /tmp/Tahoe -size 20000m -volname 'Tahoe' -layout SPUD -fs HFS+J
           sudo hdiutil attach /tmp/Tahoe.dmg -noverify -mountpoint /Volumes/Tahoe
           sleep 10
-          sudo /Applications/'Install macOS Tahoe'.app/Contents/Resources/createinstallmedia --volume /Volumes/Tahoe --nointeraction
+          sudo "${{ env.INSTALLER_PATH }}/Contents/Resources/createinstallmedia" --volume /Volumes/Tahoe --nointeraction
           cp -R '/Volumes/Install macOS Beta/BaseSystem' /tmp/BaseSystem
 
       - name: Upload com.apple.recovery.boot
